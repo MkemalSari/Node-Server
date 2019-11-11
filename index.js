@@ -1,5 +1,5 @@
 var io = require('socket.io')(process.env.PORT || 52300);
-
+https://nodejsgameserveri.herokuapp.com/
 //Custom Classes
 var Player = require('./Classes/Player.js');
 var Bullet = require('./Classes/Bullet.js');
@@ -9,6 +9,8 @@ console.log('Server has started');
 var players = [];
 var sockets = [];
 var bullets = [];
+var startTime=Date.now();
+
 
 //Updates
 setInterval(() => {
@@ -72,6 +74,11 @@ function despawnBullet(bullet = Bullet) {
     }
 }
 
+function latency() {
+    
+            sockets[playerID].emit('serverUnspawn', returnData);
+        }
+
 io.on('connection', function(socket) {
     console.log('Connection Made!');
 
@@ -81,6 +88,13 @@ io.on('connection', function(socket) {
     players[thisPlayerID] = player;
     sockets[thisPlayerID] = socket;
 
+    //Latecy test
+    socket.emit('ping',startTime);
+
+    socket.on('pong',function(startTime){
+        var latency=Date.now-startTime;
+        console.log('Latency='+latency);
+    });
     //Tell the client that this is our id for the server
     socket.emit('register', {id: thisPlayerID});
     socket.emit('spawn', player); //Tell myself I have spawned
