@@ -9,7 +9,7 @@ console.log('Server has started');
 var players = [];
 var sockets = [];
 var bullets = [];
-var startTime=Date.now();
+var startTime = Date.now();
 
 
 //Updates
@@ -18,7 +18,7 @@ setInterval(() => {
         var isDestroyed = bullet.onUpdate();
 
         //Remove Bullet
-        if(isDestroyed) {
+        if (isDestroyed) {
             despawnBullet(bullet);
         } else {
             var returnData = {
@@ -29,7 +29,7 @@ setInterval(() => {
                 }
             }
 
-            for(var playerID in players) {
+            for (var playerID in players) {
                 sockets[playerID].emit('updatePosition', returnData);
                 sockets[playerID].emit('updateVelocity', returnData);
             }
@@ -37,14 +37,14 @@ setInterval(() => {
     });
 
     //Handle Dead players
-    for(var playerID in players) {
+    for (var playerID in players) {
         let player = players[playerID];
 
-        if(player.isDead) {
+        if (player.isDead) {
             let isRespawn = player.respawnCounter();
-            if(isRespawn) {
+            if (isRespawn) {
                 let returnData = {
-                    id: player.id,                
+                    id: player.id,
                     position: {
                         x: player.position.x,
                         y: player.position.y
@@ -60,7 +60,7 @@ setInterval(() => {
 function despawnBullet(bullet = Bullet) {
     console.log('Destroying bullet (' + bullet.id + ')');
     var index = bullets.indexOf(bullet);
-    if(index > -1) {
+    if (index > -1) {
         bullets.splice(index, 1);
 
         var returnData = {
@@ -68,18 +68,12 @@ function despawnBullet(bullet = Bullet) {
         }
 
         //Send remove bullet command to players
-        for(var playerID in players) {
+        for (var playerID in players) {
             sockets[playerID].emit('serverUnspawn', returnData);
         }
     }
 }
-
-function latency() {
-    
-            sockets[playerID].emit('serverUnspawn', returnData);
-        }
-
-io.on('connection', function(socket) {
+io.on('connection', function (socket) {
     console.log('Connection Made!');
 
     var player = new Player();
@@ -89,33 +83,33 @@ io.on('connection', function(socket) {
     sockets[thisPlayerID] = socket;
 
     //Latecy test
-    socket.emit('ping',startTime);
+    
+  
 
-    socket.on('pong',function(startTime){
-        var latency=Date.now-startTime;
-        console.log('Latency='+latency);
-    });
+    
+    
+
     //Tell the client that this is our id for the server
-    socket.emit('register', {id: thisPlayerID});
+    socket.emit('register', { id: thisPlayerID });
     socket.emit('spawn', player); //Tell myself I have spawned
     socket.broadcast.emit('spawn', player); //Tell others I have spawned
-
+   
     //Tell myself about everyone else in the game
-    for(var playerID in players) {
-        if(playerID != thisPlayerID) {
+    for (var playerID in players) {
+        if (playerID != thisPlayerID) {
             socket.emit('spawn', players[playerID]);
         }
     }
 
     //Positional Data from Client
-    socket.on('updatePosition', function(data) {
+    socket.on('updatePosition', function (data) {
         player.position.x = data.position.x;
         player.position.y = data.position.y;
         player.position.z = data.position.z;
 
         socket.broadcast.emit('updatePosition', player);
     });
-    socket.on('updateVelocity', function(data) {
+    socket.on('updateVelocity', function (data) {
         player.velocity.x = data.velocity.x;
         player.velocity.y = data.velocity.y;
         player.velocity.z = data.velocity.z;
@@ -123,19 +117,19 @@ io.on('connection', function(socket) {
     });
 
     //Rotation Data from Client
-    socket.on('updateRotation', function(data) {
+    socket.on('updateRotation', function (data) {
         player.rotation.x = data.x;
         player.rotation.y = data.y;
         player.rotation.z = data.z;
 
         socket.broadcast.emit('updateRotation', player);
     });
-    
+
     //Handle Firing off the bullet
-    socket.on('fireBullet', function(data) {
+    socket.on('fireBullet', function (data) {
         var bullet = new Bullet();
-        bullet.name = 'Bullet';    
-        bullet.activator = data.activator;    
+        bullet.name = 'Bullet';
+        bullet.activator = data.activator;
         bullet.position.x = data.position.x;
         bullet.position.y = data.position.y;
         bullet.position.z = data.position.z;
@@ -165,24 +159,24 @@ io.on('connection', function(socket) {
         socket.broadcast.emit('serverSpawn', returnData);
     });
 
-    socket.on('collisionDestroy', function(data) {
+    socket.on('collisionDestroy', function (data) {
         //console.log('Collision with bullet id: ' + data.id);
         let returnBullets = bullets.filter(bullet => {
             return bullet.id == data.id
         });
-        
+
         //We will most likely only have one entry but just in case loop through all and set to destroyed
         returnBullets.forEach(bullet => {
             let playerHit = false;
             //Check if we hit someone that is not us
-            for(var playerID in players) {
-                if(bullet.activator != playerID) {
+            for (var playerID in players) {
+                if (bullet.activator != playerID) {
                     let player = players[playerID];
                     let distance = bullet.position.Distance(player.position);
 
-                    if(distance < 0.65) {
+                    if (distance < 0.65) {
                         let isDead = player.dealDamage(50); //Take half of their health for testing
-                        if(isDead) {
+                        if (isDead) {
                             console.log('Player with id: ' + player.id + ' has died');
                             let returnData = {
                                 id: player.id
@@ -197,29 +191,36 @@ io.on('connection', function(socket) {
                 }
             }
 
-            if(!playerHit) {
+            if (!playerHit) {
                 bullet.isDestroyed = true;
             }
         });
     });
+    startTime=Date.now();
+    socket.emit('ping',{time:startTime});
 
-    socket.on('disconnect', function() {
+    socket.on('pong', function (returnTime) {
+        var latency = Date.now() - startTime;
+        console.log(latency);
+        
+     });
+    socket.on('disconnect', function () {
         console.log('A player has disconnected');
         delete players[thisPlayerID];
         delete sockets[thisPlayerID];
         socket.broadcast.emit('disconnected', player);
     });
-});
 
+}); 
 function interval(func, wait, times) {
-    var interv = function(w, t){
-        return function(){
-            if(typeof t === "undefined" || t-- > 0){
+    var interv = function (w, t) {
+        return function () {
+            if (typeof t === "undefined" || t-- > 0) {
                 setTimeout(interv, w);
-                try{
+                try {
                     func.call(null);
                 }
-                catch(e){
+                catch (e) {
                     t = 0;
                     throw e.toString();
                 }
