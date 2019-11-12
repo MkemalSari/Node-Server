@@ -10,7 +10,7 @@ var players = [];
 var sockets = [];
 var bullets = [];
 var startTime = Date.now();
-
+var latency;
 
 //Updates
 setInterval(() => {
@@ -82,13 +82,7 @@ io.on('connection', function (socket) {
     players[thisPlayerID] = player;
     sockets[thisPlayerID] = socket;
 
-    //Latecy test
-    
-  
-
-    
-    
-
+   
     //Tell the client that this is our id for the server
     socket.emit('register', { id: thisPlayerID });
     socket.emit('spawn', player); //Tell myself I have spawned
@@ -196,14 +190,19 @@ io.on('connection', function (socket) {
             }
         });
     });
-    startTime=Date.now();
-    socket.emit('ping',{time:startTime});
+    
+     //Latecy test
+     socket.on('ping', function() {
+        socket.emit('pong')});
 
-    socket.on('pong', function (returnTime) {
-        var latency = Date.now() - startTime;
-        console.log(latency);
-        
-     });
+    /*  startTime=Date.now();
+     socket.emit('ping',{startTime});
+
+     socket.on('pong', function () {
+          latency = Date.now - startTime;
+         console.log(latency);   
+      }); */
+    
     socket.on('disconnect', function () {
         console.log('A player has disconnected');
         delete players[thisPlayerID];
